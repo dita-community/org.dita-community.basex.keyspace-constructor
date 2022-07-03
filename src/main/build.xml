@@ -38,6 +38,12 @@
   <property name="basex.zip.package.name" value="ditacomm-xquery-basex"/>
   <property name="basex.zip.package.dir" location="${build.dir}/${basex.zip.package.name}"/>
   
+  <!-- The path has to match the path in the module namespace declaration for BaseX to resolve
+       the module from the namespace, i.e.:
+       
+       namespace keyspace = "http://dita-community.org/basex/keyspace/xquery/module/construct-keyspace";
+    -->
+  <property name="basex.module.out.dir.path" value="dita-community.org/basex/keyspace/xquery/module"/>
   
   <!-- Default location of the BaseX XQuery repository directory.
     
@@ -67,12 +73,12 @@
   <target name="build-basex-zip-package" depends="init, clean"
     description="Prepares the files for the BaseX now-xquery repo Zip module package"
     >
-    <mkdir dir="${basex.zip.package.dir}/com/servicenow/xquery/module"/>
+    <mkdir dir="${basex.zip.package.dir}/${basex.module.out.dir.path}"/>
 
     <!-- The BaseX convention is that the package namespace URI is translated to a directory path,
          i.e., com/servicenow/xquery/module/ that then contains the module file.
       -->
-    <copy todir="${basex.zip.package.dir}/com/servicenow/xquery/module">
+    <copy todir="${basex.zip.package.dir}/${basex.module.out.dir.path}">
       <fileset dir="${xquery.src}/modules">
         <include name="*"/>
       </fileset>      
@@ -82,7 +88,7 @@
       match="(import module.+)(\s+at\s+([^;]+))"
       replace="\1"
       byline="false">
-      <fileset dir="${basex.zip.package.dir}/org/dita-community/basex/xquery/module">
+      <fileset dir="${basex.zip.package.dir}/${basex.module.out.dir.path}">
         <include name="**/*.xq*"/>
       </fileset>
     </replaceregexp>
@@ -102,7 +108,7 @@
       match="(import module.+)(\s+at\s+([^;]+))"
       replace="\1"
       byline="false">
-      <fileset dir="${basex.zip.package.dir}/org/dita-community/xquery/module">
+      <fileset dir="${basex.zip.package.dir}/${basex.module.out.dir.path}">
         <include name="**/*.xq*"/>
       </fileset>
     </replaceregexp>
@@ -120,7 +126,7 @@
   
   <target name="clean-basex-deployment" 
     description="Removes all DITA-community-related things from the BaseX server">
-    <delete dir="${basex.repo.dir}/org/dita-community" 
+    <delete dir="${basex.repo.dir}/dita-community.org/basex/keyspace" 
       failonerror="false"/>
     <delete  dir="${basex.webapp.dir}/ditacomm"
       failonerror="false"
