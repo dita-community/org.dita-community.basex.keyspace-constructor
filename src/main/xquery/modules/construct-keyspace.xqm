@@ -82,8 +82,8 @@ declare function keyspace:pass1($rootMap as element()) as map(*)* {
   
   (: Now add the child scope pointers to each key scope :)
   
-  let $pass1 as map(*) := keyspace:addChildScopes($scopes)
-  let $pass1 as map(*) := map:put($pass1, 'root-scope', $rootScopeKey)
+  let $keyScopesMap as map(*) := keyspace:addChildScopes($scopes)
+  let $pass1 as map(*) := map{'root-scope' : $rootScopeKey, 'keyscopes' : $keyScopesMap }
   
   return $pass1
 };
@@ -120,7 +120,7 @@ declare function keyspace:addChildScopes($keySpace as map(*)) as map(*) {
  : @param Pass 2 key space map with descendant key definitions pulled up.
  :)
 declare function keyspace:pass2($keySpace as map(*)) as map(*) {
-  let $rootScope as map(*) := $keySpace($keySpace('root-scope'))
+  let $rootScope as map(*) := $keySpace('keyscopes')($keySpace('root-scope'))
   let $resultKeySpace := keyspace:pullDescendantScopes($rootScope, $keySpace)
   return $resultKeySpace
 };
@@ -191,4 +191,24 @@ declare function keyspace:getScopeQualifiedKeydefsForScope(
     for $key in map:keys($keyScope('keydefs'))
     return map{ string-join(($scopeName, $key) , '.') : $keyScope('keydefs')($key)}
   return $resultKeydefs
+};
+
+(:~ 
+ : Get the key scopes with the specified name.
+ : @param keySpace The key space to get the key scope from
+ : @param scopeName The name of the scope to look up.
+ : @return Zero or more key scopes. When key scopes are returned, their order
+ : is undefined. Use the scope-def values to establish the document order of 
+ : the scopes.
+ :)
+declare function keyspace:getScopesByName(
+  $keySpace as map(*), 
+  $scopeName as xs:string) as map(*)* {
+
+  let $keyScopes as map(*) := $keySpace('keyscopes')
+  for $key as xs:integer in map:keys($keyScopes)
+  let $keyScope as map(*) :=  $keyScopes($key)
+  let $scopeNames as xs:string+ := $keyScope('scope-names')
+  where $scopeName = $scopeNames
+  return map:get($keyScopes, $key)      
 };
