@@ -1,17 +1,77 @@
 module namespace keyspace = "http://dita-community.org/basex/keyspace/xquery/module/construct-keyspace";
 
 (:~ 
- : Construct a key space from a root map
+ : Construct the XML representation of a key space  from a root map
  : @param rootMap The root map to construct the key space from
  : @return The key space document.
  :)
 declare function keyspace:constructKeySpace($rootMap as element()) as element(keyspace:keyspace) {
   let $pass1keySpace as map(*) := keyspace:pass1($rootMap)
   let $pass2keySpace as map(*) := keyspace:pass2($pass1keySpace)
+  let $keySpace as map(*) := $pass1keySpace (: Replace with pass 2 once pass 2 is working. :)
   return
-  <keyspace:keyspace timestamp="{current-dateTime()}">{
-    (: $pass1keySpace :)
+  <keyspace:keyspace
+    timestamp="{$keySpace('timestamp')}"
+    source-ditamap="{$keySpace('source-ditamap')}"
+  >{
+    keyspace:serializeKeyscopeToXml(keyspace:getRootScope($keySpace), $keySpace)
   }</keyspace:keyspace>
+};
+
+(:~ 
+ : Construct the XML representation of a key space
+ : @param keyScope The key scope to serialize
+ : @param keySpace The key space that contains the scope.
+ : @return The XML for the key scope and any descendant scopes
+ :)
+declare function keyspace:serializeKeyscopeToXml($keyScope as map(*), $keySpace as map(*)) as node()* {
+  (: let $debug := (prof:dump('serializeKeyscopeToXml(): keyScope:'), prof:dump($keyScope)) :)
+  let $scopeNames as xs:string+ := $keyScope('scope-names')
+  let $keydefs as map(*) := $keyScope('keydefs')
+  return
+  <keyspace:keyscope id="{keyspace:getScopeId($keyScope)}">
+    <keyspace:scope-names>{
+      for $name in $scopeNames
+      return <keyspace:scope-name>{$name}</keyspace:scope-name>      
+    }</keyspace:scope-names> 
+    <keyspace:keys>{
+      for $key in map:keys($keydefs)
+      return 
+      <keyspace:key keyname="{$key}">{
+        for $keydef in $keydefs($key)
+        return
+        <keyspace:keydef nodeid="{db:node-id($keydef)}">{
+          ($keydef/@*, $keydef/*[contains-token(@class, 'topic/navtitle')])
+        }</keyspace:keydef>
+      }</keyspace:key>
+    }</keyspace:keys>
+    {
+      let $childScopes as map(*)* := ($keyScope('child-scopes') ! $keySpace('keyscopes')(.))
+      (: Put the scope-defining elements in document order :)
+      let $scopeDefs as element()* := $childScopes?scope-def => util:ddo()
+      return
+      for $scopeDef in $scopeDefs
+      let $nodeId as xs:integer := db:node-id($scopeDef)
+      let $scope := $keySpace('keyscopes')($nodeId)
+      return keyspace:serializeKeyscopeToXml($scope, $keySpace)
+    }
+  </keyspace:keyscope>
+};
+
+(:~ 
+ : Get the XML ID for a key scope
+ :)
+declare function keyspace:getScopeId($keyScope as map(*)) as xs:string {
+  'scope_' || $keyScope('scope-key')
+};
+
+(:~ 
+ : Gets the root key scope for the specified key space
+ : @param keySpace The key space to get the root scope for
+ : @return The root key space. A key space always has a root scope.
+ :)
+declare function keyspace:getRootScope($keySpace as map(*)) as map(*) {
+   $keySpace('keyscopes')($keySpace('root-scope'))
 };
 
 (:~ 
@@ -83,7 +143,12 @@ declare function keyspace:pass1($rootMap as element()) as map(*)* {
   (: Now add the child scope pointers to each key scope :)
   
   let $keyScopesMap as map(*) := keyspace:addChildScopes($scopes)
-  let $pass1 as map(*) := map{'root-scope' : $rootScopeKey, 'keyscopes' : $keyScopesMap }
+  let $pass1 as map(*) := 
+    map{
+      'root-scope' : $rootScopeKey, 
+      'timestamp' : current-dateTime(),
+      'source-ditamap' : db:path($rootMap),
+      'keyscopes' : $keyScopesMap }
   
   return $pass1
 };
@@ -138,7 +203,7 @@ declare function keyspace:pullDescendantScopes(
   as map(*) 
 {
   let $childScopes as map(*)* := ($keyScope('child-scopes') ! $keySpace(.))
-  let $debug := (prof:dump('keySpace'), prof:dump($keySpace))
+  (: let $debug := (prof:dump('keySpace'), prof:dump($keySpace)) :)
   let $pulledKeydefs as map(*)* := () (: keyspace:pullKeydefsFromScopes($childScopes, $keySpace, map{}) :)
   let $newKeydefs as map(*) := 
      map:merge(

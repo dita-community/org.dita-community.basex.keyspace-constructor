@@ -73,7 +73,7 @@ declare function ditacomm:reportKeyScope($keyScope as map(*), $keySpace as map(*
       <ul>{
         for $scope in $childScopes
         return
-        <li><a href="#{ditacomm:getScopeId($scope)}">{$scope('scope-names') => string-join(', ')}</a></li>
+        <li><a href="#{keyspace:getScopeId($scope)}">{$scope('scope-names') => string-join(', ')}</a></li>
       }</ul>
     }
   </div>
@@ -82,6 +82,3 @@ declare function ditacomm:reportKeyScope($keyScope as map(*), $keySpace as map(*
   )
 };
 
-declare function ditacomm:getScopeId($keyScope as map(*)) as xs:string {
-  'scope_' || $keyScope('scope-key')
-};
