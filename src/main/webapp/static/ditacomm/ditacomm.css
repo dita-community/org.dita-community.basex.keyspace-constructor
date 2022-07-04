@@ -5,3 +5,22 @@
 :root {
   font-family: Verdana, sans-serif;
 }
+
+table
+{
+  table-layout: auto;
+  width: 400px;
+  border-collapse: collapse;
+  border: 1pt solid black;
+}
+
+tr,
+th,
+td
+{
+  border: 0.5pt solid black;
+}
+
+th, td {
+  padding: 20px;  
+}

@@ -19,10 +19,11 @@ declare function keyspace:constructKeySpace($rootMap as element()) as element(ke
  : @return Map of key scopes where the top-level entry is for the root map's
  : annonymous key scope.
  :)
-declare function keyspace:pass1($rootMap as element()) as map(*) {
+declare function keyspace:pass1($rootMap as element()) as map(*)* {
   let $db as xs:string := db:name($rootMap)
 
   let $keydefs as element()* := $rootMap//*[@keys]
+  let $rootScopeKey as xs:integer := db:node-id($rootMap)
   
   let $entries as map(*)* := 
     for $keydef in $keydefs
@@ -45,11 +46,44 @@ declare function keyspace:pass1($rootMap as element()) as map(*) {
           'scope-key' : $scopeKey,
           'scope-def' : $scopeDef,
           'scope-names' : if (exists($scopeDef/@keyscope)) then ($scopeDef/@keyscope ! tokenize(., '\s+')) else '#root',
-          'ancestor-scopes' : (($scopeDef/ancestor::*[@keyscope], root($scopeDef)/*)) ! db:node-id(.),
-          'keydefs' : for $e in $entry return $e(map:keys($e))
+          'ancestor-scopes' : 
+          if ($scopeKey eq $rootScopeKey)
+          then ()
+          else
+            (($scopeDef/ancestor::*[@keyscope], root($scopeDef)/*)) ! db:node-id(.),
+            'keydefs' : for $e in $entry return $e(map:keys($e))
         }
       }
   )
-  return $scopes
+  
+  (: Now add the child scope pointers to each key scope :)
+  
+  let $finalScopes as map(*) := keyspace:addChildScopes($scopes)
+  
+  return $finalScopes
 };
 
+(:~ 
+ : Builds the scope tree by adding child scopes to each scope in the initial scope set, recursively.
+ : @param keyScope Map for the key scope to add child scopes to
+ : @param keySpace Map with all the key scopes in it.
+ : @return Key scope map with the any child scopes added it.
+ :)
+declare function keyspace:addChildScopes($keySpace as map(*)) as map(*) {
+  let $resultKeySpace as map(*) :=
+  map:merge(
+    for $scopeKey in map:keys($keySpace)
+      let $keyScope as map(*) := $keySpace($scopeKey)
+      let $childScopes as xs:integer* :=
+          for $key in map:keys($keySpace)
+          let $cand as map(*) := $keySpace($key)
+          let $nearestAncestor as xs:integer? := $cand('ancestor-scopes')[1]
+          return
+            if ($nearestAncestor eq $scopeKey)
+            then $key
+            else ()
+      let $newScope as map(*) := map:put($keyScope, 'child-scopes', $childScopes)
+      return map{ $scopeKey : $newScope}
+  )
+  return $resultKeySpace
+};
