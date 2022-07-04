@@ -43,10 +43,11 @@ declare function ditacomm:reportKeySpaceForMap($rootMap as element()) as node()*
 };
 
 declare function ditacomm:reportKeyScope($keyScope as map(*), $keySpace as map(*)) as node()* {
-  let $childScopes as xs:integer* := $keyScope('child-scopes')
+  let $childScopes as map(*)* := $keyScope('child-scopes') ! $keySpace(.)
   let $keydefs as element()* := $keyScope('keydefs')
+  
   return (
-  <div class="key-scope-report">
+  <div class="key-scope-report" id="{ditacomm:getScopeId($keyScope)}">
     <h3>{$keyScope('scope-names') => string-join(', ')}</h3>
     <table class="key-scope">
       <thead>
@@ -72,13 +73,17 @@ declare function ditacomm:reportKeyScope($keyScope as map(*), $keySpace as map(*
       then <p>None</p>
       else
       <ul>{
-        ($childScopes ! $keySpace(.)?scope-names => string-join(', ')) ! (<li>{.}</li>)
+        for $scope in $childScopes
+        return
+        <li><a href="#{ditacomm:getScopeId($scope)}">{$scope('scope-names') => string-join(', ')}</a></li>
       }</ul>
     }
   </div>
-  ,
-  $childScopes ! $keySpace(.) ! ditacomm:reportKeyScope(., $keySpace)
-  
+   ,
+  ($childScopes ! ditacomm:reportKeyScope(., $keySpace)) 
   )
 };
 
+declare function ditacomm:getScopeId($keyScope as map(*)) as xs:string {
+  'scope_' || $keyScope('scope-key')
+};
