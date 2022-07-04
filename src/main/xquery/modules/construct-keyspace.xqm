@@ -37,7 +37,7 @@ declare function keyspace:pass1($rootMap as element()) as map(*)* {
   
   (: Map indexed by scope key of key scope maps :)
   let $scopes as map(*) :=
-  map:merge(
+  map:merge(    
     for $entry as map(*) in $entries
       group by $scopeKey as xs:integer := map:keys($entry)
       let $scopeDef as element() := db:open-id($db, $scopeKey)
@@ -57,19 +57,25 @@ declare function keyspace:pass1($rootMap as element()) as map(*)* {
              by the scope:)
           'keydefs' :
           let $keydefs as element()* := $entry ! map:get(., $scopeKey)
-          return
+          let $unsortedKeyMap as map(*) :=
+            map:merge(
+              for $keydef in $keydefs
+              let $keyNames as xs:string* := tokenize($keydef/@keys, '\s+')
+              return
+              for $keyName in $keyNames
+              return 
+              map {
+                $keyName : $keydef
+              },
+              map{'duplicates' : 'combine'}
+            )
+          return 
           map:merge(
-            for $keydef in $keydefs
-            let $keyNames as xs:string* := tokenize($keydef/@keys, '\s+')
-            return
-            for $keyName in $keyNames
-            return 
-            map {
-              $keyName : $keydef
-            },
-            map{'duplicates' : 'combine'}
-          )
-        
+            for $key in map:keys($unsortedKeyMap)
+            (: Put the key definitions in document order :)
+            let $keydefs := $unsortedKeyMap($key) => util:ddo() 
+            return map { $key : $keydefs}
+          )        
         }
       }
   )
@@ -77,6 +83,7 @@ declare function keyspace:pass1($rootMap as element()) as map(*)* {
   (: Now add the child scope pointers to each key scope :)
   
   let $pass1 as map(*) := keyspace:addChildScopes($scopes)
+  let $pass1 as map(*) := map:put($pass1, 'root-scope', $rootScopeKey)
   
   return $pass1
 };
@@ -113,8 +120,8 @@ declare function keyspace:addChildScopes($keySpace as map(*)) as map(*) {
  : @param Pass 2 key space map with descendant key definitions pulled up.
  :)
 declare function keyspace:pass2($keySpace as map(*)) as map(*) {
-  let $rootScope as map(*) := $keySpace('#root')
-  let $resultKeySpace := keyspace:pullDescendantScopes($rootScope, $keySpace, map{})
+  let $rootScope as map(*) := $keySpace($keySpace('root-scope'))
+  let $resultKeySpace := keyspace:pullDescendantScopes($rootScope, $keySpace)
   return $resultKeySpace
 };
 
@@ -123,20 +130,65 @@ declare function keyspace:pass2($keySpace as map(*)) as map(*) {
  : @param keyScope The key scope to process
  : @param keySpace Pass 1 key space map
  : @param keyDefs Sequence of key-to-keydef maps pulled from descendants.
- : @param Pass 2 key space map with descendant key definitions pulled up.
+ : @return The key scope with pulled-up keydefs added to it.
  :)
 declare function keyspace:pullDescendantScopes(
   $keyScope as map(*), 
-  $keySpace as map(*),
-  $keyDefs as map(*)) 
+  $keySpace as map(*)) 
   as map(*) 
 {
-  let $childScopes as map(*)* := $keyScope('child-scopes') ! $keySpace(.)
-  (: FIXME: Implement the recursive processing :)
-  return
-  if (empty($childScopes))
-  then $keySpace
-  else 
-  $keySpace
+  let $childScopes as map(*)* := ($keyScope('child-scopes') ! $keySpace(.))
+  let $debug := (prof:dump('keySpace'), prof:dump($keySpace))
+  let $pulledKeydefs as map(*)* := () (: keyspace:pullKeydefsFromScopes($childScopes, $keySpace, map{}) :)
+  let $newKeydefs as map(*) := 
+     map:merge(
+       ($keyScope('keydefs'),
+        $pulledKeydefs), 
+       map{'duplicates' : 'combine'})
+  return map:put($keyScope, 'keydefs', $newKeydefs)
   
+};
+
+(:~ 
+ : Collect scope-qualified key names from a sequence of key scopes
+ : @param childScopes Zero or more key scopes to get the keys from.
+ : @param keySpace The key space that contains the scopes
+ : @param keyDefs The accumulated key definitions from any ancestor scopes.
+ : @return Sequence of key definition maps, one for each key-defining topicref
+ :)
+declare function keyspace:pullKeydefsFromScopes(
+  $childScopes as map(*)*,
+  $keySpace as map(*),
+  $keyDefs as map(*)*) 
+    as map(*)* {
+  let $newKeydefs as map(*)* := 
+  for $scope in $childScopes
+  return keyspace:getScopeQualifiedKeydefsForScope($scope, $keySpace)
+  let $resultKeydefs as map(*) := (
+    $keyDefs,
+    $newKeydefs
+  )  
+  return $resultKeydefs
+};
+
+(:~ 
+ : Gets the scope-qualified key definitions from a key scope
+ : @param keyScope The key scope to get the key definitions for
+ : @param keySpace The key space that contains the scope
+ : @return Sequence of key definition maps(*)
+ :)
+declare function keyspace:getScopeQualifiedKeydefsForScope(
+  $keyScope as map(*), 
+  $keySpace as map(*)) 
+    as map(*)* {
+  let $scopeNames as xs:string+ := $keyScope('scope-names')
+  let $descendantKeys as map(*)* :=
+    for $childScope in ($keyScope('child-scopes') ! $keySpace(.))
+    return keyspace:getScopeQualifiedKeydefsForScope($childScope, $keySpace)
+  let $resultKeydefs as map(*)* :=
+    for $scopeName in $scopeNames
+    return
+    for $key in map:keys($keyScope('keydefs'))
+    return map{ string-join(($scopeName, $key) , '.') : $keyScope('keydefs')($key)}
+  return $resultKeydefs
 };
