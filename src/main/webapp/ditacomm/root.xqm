@@ -44,7 +44,7 @@ declare function ditacomm:reportKeySpaceForMap($rootMap as element()) as node()*
 
 declare function ditacomm:reportKeyScope($keyScope as map(*), $keySpace as map(*)) as node()* {
   let $childScopes as map(*)* := $keyScope('child-scopes') ! $keySpace(.)
-  let $keydefs as element()* := $keyScope('keydefs')
+  let $keydefs as map(*) := $keyScope('keydefs')
   
   return (
   <div class="key-scope-report" id="{ditacomm:getScopeId($keyScope)}">
@@ -57,13 +57,11 @@ declare function ditacomm:reportKeyScope($keyScope as map(*), $keySpace as map(*
         </tr>
       </thead>    
       <tbody>{
-        for $keydef in $keydefs
-        let $keyNames as xs:string* := tokenize($keydef/@keys, '\s+')
-        for $keyName in $keyNames
+        for $keyName in map:keys($keydefs)
         return 
         <tr>
           <td>{$keyName}</td>
-          <td>{string($keydef/@href)}</td>
+          <td>{string($keydefs($keyName)/@href)}</td>
         </tr>        
       }</tbody>
     </table>

@@ -7,6 +7,7 @@ module namespace keyspace = "http://dita-community.org/basex/keyspace/xquery/mod
  :)
 declare function keyspace:constructKeySpace($rootMap as element()) as element(keyspace:keyspace) {
   let $pass1keySpace as map(*) := keyspace:pass1($rootMap)
+  let $pass2keySpace as map(*) := keyspace:pass2($pass1keySpace)
   return
   <keyspace:keyspace timestamp="{current-dateTime()}">{
     (: $pass1keySpace :)
@@ -51,16 +52,33 @@ declare function keyspace:pass1($rootMap as element()) as map(*)* {
           then ()
           else
             (($scopeDef/ancestor::*[@keyscope], root($scopeDef)/*)) ! db:node-id(.),
-            'keydefs' : for $e in $entry return $e(map:keys($e))
+          (: Because of the grouping, $entry is actualy a sequence of maps of scope 
+             key to topicref, representing all the key definitions directly defined 
+             by the scope:)
+          'keydefs' :
+          let $keydefs as element()* := $entry ! map:get(., $scopeKey)
+          return
+          map:merge(
+            for $keydef in $keydefs
+            let $keyNames as xs:string* := tokenize($keydef/@keys, '\s+')
+            return
+            for $keyName in $keyNames
+            return 
+            map {
+              $keyName : $keydef
+            },
+            map{'duplicates' : 'combine'}
+          )
+        
         }
       }
   )
   
   (: Now add the child scope pointers to each key scope :)
   
-  let $finalScopes as map(*) := keyspace:addChildScopes($scopes)
+  let $pass1 as map(*) := keyspace:addChildScopes($scopes)
   
-  return $finalScopes
+  return $pass1
 };
 
 (:~ 
@@ -86,4 +104,39 @@ declare function keyspace:addChildScopes($keySpace as map(*)) as map(*) {
       return map{ $scopeKey : $newScope}
   )
   return $resultKeySpace
+};
+
+(:~ 
+ : Perform pass 2 to pull key definitions up from descendant scopes to ancestor scopes.
+ : @param keySpace Pass 1 key space map
+ : @param resultKeySpace Key space with descendant keys pulled up.
+ : @param Pass 2 key space map with descendant key definitions pulled up.
+ :)
+declare function keyspace:pass2($keySpace as map(*)) as map(*) {
+  let $rootScope as map(*) := $keySpace('#root')
+  let $resultKeySpace := keyspace:pullDescendantScopes($rootScope, $keySpace, map{})
+  return $resultKeySpace
+};
+
+(:~ 
+ : Pulls descendant keys up into this key scope's key space.
+ : @param keyScope The key scope to process
+ : @param keySpace Pass 1 key space map
+ : @param keyDefs Sequence of key-to-keydef maps pulled from descendants.
+ : @param Pass 2 key space map with descendant key definitions pulled up.
+ :)
+declare function keyspace:pullDescendantScopes(
+  $keyScope as map(*), 
+  $keySpace as map(*),
+  $keyDefs as map(*)) 
+  as map(*) 
+{
+  let $childScopes as map(*)* := $keyScope('child-scopes') ! $keySpace(.)
+  (: FIXME: Implement the recursive processing :)
+  return
+  if (empty($childScopes))
+  then $keySpace
+  else 
+  $keySpace
+  
 };
