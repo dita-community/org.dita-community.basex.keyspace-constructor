@@ -30,7 +30,7 @@ as element(html) {
 
 declare function ditacomm:reportKeySpaceForMap($rootMap as element()) as node()* {
   let $keySpace as map(*)* := keyspace:pass1($rootMap)
-  let $rootScope as map(*) := $keySpace(db:node-id($rootMap))
+  let $rootScope as map(*) := $keySpace('key-scopes')(db:node-id($rootMap))
   return
   <div class="keyspace-report">
     <h2>Key Space for map {db:path($rootMap)}</h2>
@@ -47,7 +47,7 @@ declare function ditacomm:reportKeyScope($keyScope as map(*), $keySpace as map(*
   let $keydefs as map(*) := $keyScope('keydefs')
   
   return (
-  <div class="key-scope-report" id="{ditacomm:getScopeId($keyScope)}">
+  <div class="key-scope-report" id="{keyspace:getScopeId($keyScope)}">
     <h3>{$keyScope('scope-names') => string-join(', ')}</h3>
     <table class="key-scope">
       <thead>
