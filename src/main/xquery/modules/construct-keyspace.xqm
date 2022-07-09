@@ -9,13 +9,16 @@ declare function keyspace:constructKeySpace($rootMap as element()) as element(ke
   let $pass1keySpace as map(*) := keyspace:pass1($rootMap)
   let $pass2keySpace as map(*) := keyspace:pass2($pass1keySpace)
   let $keySpace as map(*) := $pass1keySpace (: Replace with pass 2 once pass 2 is working. :)
-  return
+  let $keyspacePass1 as element(keyspace:keyspace) :=
   <keyspace:keyspace
     timestamp="{$keySpace('timestamp')}"
     source-ditamap="{$keySpace('source-ditamap')}"
   >{
     keyspace:serializeKeyscopeToXml(keyspace:getRootScope($keySpace), $keySpace)
   }</keyspace:keyspace>
+  let $keyspacePass2 as element(keyspace:keyspace) :=
+      keyspace:pullUpKeydefs($keyspacePass1)
+  return $keyspacePass2
 };
 
 (:~ 
@@ -277,3 +280,65 @@ declare function keyspace:getScopesByName(
   where $scopeName = $scopeNames
   return map:get($keyScopes, $key)      
 };
+
+(:~ 
+ : Pull descendant keydefs up into ancestor keydefs
+ :)
+declare function keyspace:pullUpKeydefs($keyspacePass1 as element(keyspace:keyspace)) 
+    as element(keyspace:keyspace) {
+   let $debug := prof:dump('keyspace:pullUpKeydefs(): Starting')
+   let $result as element(keyspace:keyspace) :=
+   <keyspace:keyspace>
+   {
+     $keyspacePass1/@*
+   }
+   {
+     for $keyscope as element(keyspace:keyscope)* in $keyspacePass1/keyspace:keyscope
+     return keyspace:pullUpKeydefsForKeyscope($keyscope)
+   }
+   </keyspace:keyspace>
+   let $debug := prof:dump('keyspace:pullUpKeydefs(): Done')
+   return $result
+};
+
+(:~ 
+ : Pull descendant keydefs up into ancestor keydefs
+ :)
+declare function keyspace:pullUpKeydefsForKeyscope($keyscope as element(keyspace:keyscope)) 
+    as element(keyspace:keyscope) {
+   let $result :=
+   <keyspace:keyscope>
+     {
+       $keyscope/@*,
+       $keyscope/keyspace:scope-names
+     }
+     <keyspace:keys>
+       {
+         (: This scope's key definitions :)
+         $keyscope/keyspace:keys/node()
+       }      
+       {
+         (: Descendant key scopes' key definitions, with prefixes added :)
+         for $key in $keyscope//keyspace:keyscope/keyspace:keys/keyspace:key
+         let $keyscopes as element()+ := $key/ancestor::keyspace:keyscope[. >> $keyscope]
+         (: FIXME: Need to account for multiple keyscope names:)
+         let $scopePrefix as xs:string := $keyscopes/keyspace:scope-names/keyspace:scope-name[1] ! string(.) => 
+                                          string-join('.')
+         return 
+         <keyspace:key>{
+             attribute {$key/@keyname} { string-join(($scopePrefix, string($key/@keyname)), '.')}
+           }
+           {
+             $key/node()
+         }</keyspace:key>
+       }
+     </keyspace:keys>
+     {
+       (: Now process descendant key scopes :)
+       for $childKeyscope as element(keyspace:keyscope)* in $keyscope/keyspace:keyscope
+       return keyspace:pullUpKeydefsForKeyscope($childKeyscope)
+     }
+   </keyspace:keyscope>
+   return $result
+};
+
