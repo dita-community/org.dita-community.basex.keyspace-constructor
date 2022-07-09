@@ -326,7 +326,7 @@ declare function keyspace:pullUpKeydefsForKeyscope($keyscope as element(keyspace
                                           string-join('.')
          return 
          <keyspace:key>{
-             attribute {$key/@keyname} { string-join(($scopePrefix, string($key/@keyname)), '.')}
+             attribute keyname { string-join(($scopePrefix, string($key/@keyname)), '.')}
            }
            {
              $key/node()

@@ -30,19 +30,70 @@ as element(html) {
 
 declare function ditacomm:reportKeySpaceForMap($rootMap as element()) as node()* {
   let $keySpace as map(*)* := keyspace:pass1($rootMap)
-  let $rootScope as map(*) := $keySpace('keyscopes')(db:node-id($rootMap))
+  let $keySpaceXml as element() := keyspace:constructKeySpace($rootMap)
+  let $rootScope as element(keyspace:keyscope) := $keySpaceXml/keyspace:keyscope
   return
   <div class="keyspace-report">
     <h2>Key Space for map {db:path($rootMap)}</h2>
     <div>{
-       ditacomm:reportKeyScope($rootScope, $keySpace)
+       ditacomm:reportKeyScope($rootScope)
     }{     
     }
     </div>
   </div>
 };
 
-declare function ditacomm:reportKeyScope($keyScope as map(*), $keySpace as map(*)) as node()* {
+(:~ 
+ : Reports the XML representation of a key space
+ :)
+declare function ditacomm:reportKeyScope($keyScope as element(keyspace:keyscope)) as node()* {
+  let $childScopes as element(keyspace:keyscope)* := $keyScope/keyspace:keyscope
+  let $keys as element(keyspace:key)* := $keyScope/keyspace:keys/keyspace:key
+  let $debug := (prof:dump('keyScope:'), prof:dump($keyScope))
+  return (
+  <div class="key-scope-report" id="{$keyScope/@id}">
+    <h3>{$keyScope/keyspace:scope-names/keyspace:scope-name ! string(.) => string-join(', ')}</h3>
+    <table class="key-scope">
+      <thead>
+        <tr>
+          <th>Key Name</th>
+          <th>Resource</th>
+        </tr>
+      </thead>    
+      <tbody>{
+        for $key in $keys
+        return
+        for $keyName as xs:string in ($key/@keyname ! tokenize(., '\s+'))
+        return 
+        <tr>
+          <td>{$keyName}</td>
+          <!--  FIXME: This only shows the first (effective) definition for the key -->        
+          <td>{$key/keyspace:keydef[1]/@href ! string(.)}</td>
+        </tr>        
+      }</tbody>
+    </table>
+    <p>Child scopes:</p>
+    {
+      if (empty($childScopes))
+      then <p>None</p>
+      else
+      <ul>{
+        for $scope in $childScopes
+        return
+        <li><a href="#{$scope/@id ! string(.)}">{($scope/keyspace:scope-names/*) => string-join(', ')}</a></li>
+      }</ul>
+    }
+  </div>
+   ,
+  ($childScopes ! ditacomm:reportKeyScope(.)) 
+  )
+};
+
+
+(:~ 
+ : Report the XQuery map representation of a key space
+ :)
+declare function ditacomm:reportKeyScopeMap($keyScope as map(*), $keySpace as map(*)) as node()* {
   let $childScopes as map(*)* := $keyScope('child-scopes') ! $keySpace('keyscopes')(.)
   let $keydefs as map(*) := $keyScope('keydefs')
   
@@ -78,7 +129,7 @@ declare function ditacomm:reportKeyScope($keyScope as map(*), $keySpace as map(*
     }
   </div>
    ,
-  ($childScopes ! ditacomm:reportKeyScope(., $keySpace)) 
+  ($childScopes ! ditacomm:reportKeyScopeMap(., $keySpace)) 
   )
 };
 
