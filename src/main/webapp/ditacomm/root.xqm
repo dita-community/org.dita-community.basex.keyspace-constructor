@@ -49,7 +49,7 @@ declare function ditacomm:reportKeySpaceForMap($rootMap as element()) as node()*
 declare function ditacomm:reportKeyScope($keyScope as element(keyspace:keyscope)) as node()* {
   let $childScopes as element(keyspace:keyscope)* := $keyScope/keyspace:keyscope
   let $keys as element(keyspace:key)* := $keyScope/keyspace:keys/keyspace:key
-  let $debug := (prof:dump('keyScope:'), prof:dump($keyScope))
+  (: let $debug := (prof:dump('keyScope:'), prof:dump($keyScope)) :)
   return (
   <div class="key-scope-report" id="{$keyScope/@id}">
     <h3>{$keyScope/keyspace:scope-names/keyspace:scope-name ! string(.) => string-join(', ')}</h3>

@@ -18,7 +18,9 @@ declare function keyspace:constructKeySpace($rootMap as element()) as element(ke
   }</keyspace:keyspace>
   let $keyspacePass2 as element(keyspace:keyspace) :=
       keyspace:pullUpKeydefs($keyspacePass1)
-  return $keyspacePass2
+  let $keyspacePass3 as element(keyspace:keyspace) :=
+      keyspace:pushDownKeydefs($keyspacePass2)
+  return $keyspacePass3
 };
 
 (:~ 
@@ -337,6 +339,56 @@ declare function keyspace:pullUpKeydefsForKeyscope($keyscope as element(keyspace
        (: Now process descendant key scopes :)
        for $childKeyscope as element(keyspace:keyscope)* in $keyscope/keyspace:keyscope
        return keyspace:pullUpKeydefsForKeyscope($childKeyscope)
+     }
+   </keyspace:keyscope>
+   return $result
+};
+
+(:~ 
+ : Push ancestor keydefs down into descendent keydefs
+ :)
+declare function keyspace:pushDownKeydefs($keyspacePass2 as element(keyspace:keyspace)) 
+    as element(keyspace:keyspace) {
+   let $debug := prof:dump('keyspace:pushDownKeydefs(): Starting')
+   let $result as element(keyspace:keyspace) :=
+   <keyspace:keyspace>
+   {
+     $keyspacePass2/@*
+   }
+   {
+     for $keyscope as element(keyspace:keyscope)* in $keyspacePass2/keyspace:keyscope
+     return keyspace:pushDownKeydefsForKeyscope($keyscope)
+   }
+   </keyspace:keyspace>
+   let $debug := prof:dump('keyspace:pushDownKeydefs(): Done')
+   return $result
+};
+
+(:~ 
+ : Push ancestor keydefs into this keyscope
+ :)
+declare function keyspace:pushDownKeydefsForKeyscope($keyscope as element(keyspace:keyscope)) 
+    as element(keyspace:keyscope) {
+   let $result :=
+   <keyspace:keyscope>
+     {
+       $keyscope/@*,
+       $keyscope/keyspace:scope-names
+     }
+     <keyspace:keys>
+       {
+         (: Ancestor key scopes' key definitions :)
+         $keyscope/ancestor::keyspace:keyscope/keyspace:keys/*
+       }
+       {
+         (: This scope's key definitions :)
+         $keyscope/keyspace:keys/node()
+       }      
+     </keyspace:keys>
+     {
+       (: Now process descendant key scopes :)
+       for $childKeyscope as element(keyspace:keyscope)* in $keyscope/keyspace:keyscope
+       return keyspace:pushDownKeydefsForKeyscope($childKeyscope)
      }
    </keyspace:keyscope>
    return $result
