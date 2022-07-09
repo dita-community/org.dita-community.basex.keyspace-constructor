@@ -6,6 +6,7 @@
   <topicgroup keyscope="scope-A scope-Aprime">
     <topicref keys="key-01" href="topic-01-A.dita"/>
     <topicref keys="key-02" href="topic-02-A.dita"/>
+    <topicref keys="key-02" href="topic-02.1-A.dita" deliveryTarget="pdf"/>
     <topicgroup keyscope="scope-C">
       <topicref keys="key-01" href="topic-01-C.dita"/>
       <topicref keys="key-02" href="topic-02-C.dita"/>

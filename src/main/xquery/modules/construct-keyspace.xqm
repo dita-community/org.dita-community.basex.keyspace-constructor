@@ -7,8 +7,7 @@ module namespace keyspace = "http://dita-community.org/basex/keyspace/xquery/mod
  :)
 declare function keyspace:constructKeySpace($rootMap as element()) as element(keyspace:keyspace) {
   let $pass1keySpace as map(*) := keyspace:pass1($rootMap)
-  let $pass2keySpace as map(*) := keyspace:pass2($pass1keySpace)
-  let $keySpace as map(*) := $pass1keySpace (: Replace with pass 2 once pass 2 is working. :)
+  let $keySpace as map(*) := $pass1keySpace 
   let $keyspacePass1 as element(keyspace:keyspace) :=
   <keyspace:keyspace
     timestamp="{$keySpace('timestamp')}"
@@ -316,22 +315,28 @@ declare function keyspace:pullUpKeydefsForKeyscope($keyscope as element(keyspace
      }
      <keyspace:keys>
        {
-         (: This scope's key definitions :)
-         $keyscope/keyspace:keys/node()
-       }      
-       {
          (: Descendant key scopes' key definitions, with prefixes added :)
-         for $key in $keyscope//keyspace:keyscope/keyspace:keys/keyspace:key
-         let $keyscopes as element()+ := $key/ancestor::keyspace:keyscope[. >> $keyscope]
-         (: FIXME: Need to account for multiple keyscope names:)
-         let $scopePrefix as xs:string := $keyscopes/keyspace:scope-names/keyspace:scope-name[1] ! string(.) => 
-                                          string-join('.')
-         return 
-         <keyspace:key>{
-             attribute keyname { string-join(($scopePrefix, string($key/@keyname)), '.')}
-           }
-           {
-             $key/node()
+         let $pulledUpKeys as element(keyspace:key)* :=
+           for $key in $keyscope//keyspace:keyscope/keyspace:keys/keyspace:key
+           let $keyscopes as element()+ := $key/ancestor::keyspace:keyscope[. >> $keyscope]
+           (: FIXME: Need to account for multiple keyscope names:)
+           let $scopePrefix as xs:string := $keyscopes/keyspace:scope-names/keyspace:scope-name[1] ! string(.) => 
+                                            string-join('.')
+           return 
+           <keyspace:key>{
+               attribute keyname { string-join(($scopePrefix, string($key/@keyname)), '.')}
+             }
+             {
+               $key/node()
+           }</keyspace:key>
+         (: Now combine with keys in this scope so there is exactly one keyspace:keys element for each
+            key name
+          :)
+         for $keySet in ($keyscope/keyspace:keys/node(), $pulledUpKeys)
+         group by $keyname := string($keySet/@keyname)
+         return
+         <keyspace:key keyname="{$keyname}">{
+             $keySet/node()
          }</keyspace:key>
        }
      </keyspace:keys>
@@ -377,12 +382,15 @@ declare function keyspace:pushDownKeydefsForKeyscope($keyscope as element(keyspa
      }
      <keyspace:keys>
        {
-         (: Ancestor key scopes' key definitions :)
-         $keyscope/ancestor::keyspace:keyscope/keyspace:keys/*
-       }
-       {
-         (: This scope's key definitions :)
-         $keyscope/keyspace:keys/node()
+         (: Ancestor key scopes' key definitions then our keydefs :)         
+         for $key in ($keyscope/ancestor::keyspace:keyscope/keyspace:keys/*, 
+                         $keyscope/keyspace:keys/node())
+         group by $keyname := string($key/@keyname)
+         let $debug := prof:dump('keyname=' || $keyname || ', have ' || count($key) || ' keys')
+         return
+         <keyspace:key keyname="{$keyname}">{
+             $key/node()
+         }</keyspace:key>
        }      
      </keyspace:keys>
      {
