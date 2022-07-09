@@ -58,18 +58,37 @@ declare function ditacomm:reportKeyScope($keyScope as element(keyspace:keyscope)
         <tr>
           <th>Key Name</th>
           <th>Resource</th>
+          <th>Conditions</th>
         </tr>
       </thead>    
       <tbody>{
         for $key in $keys
         return
         for $keyName as xs:string in ($key/@keyname ! tokenize(., '\s+'))
-        return 
+        let $keydefs as element()* := $key/keyspace:keydef
+        return
+        ( 
         <tr>
-          <td>{$keyName}</td>
-          <!--  FIXME: This only shows the first (effective) definition for the key -->        
-          <td>{$key/keyspace:keydef[1]/@href ! string(.)}</td>
-        </tr>        
+          <td>
+            {if (count($keydefs) gt 1)
+             then attribute rowspan {count($keydefs)}
+             else ()
+            }
+            {$keyName}
+          </td>         
+          <td>{$keydefs[1]/@href ! string(.)}</td>
+          <td>{
+            ditacomm:formatConditionalAttributes($keydefs[1])
+          }</td>
+        </tr>
+        ,
+        for $keydef in tail($keydefs)
+        return
+        <tr>
+          <td>{$keydef/@href ! string(.)}</td>
+          <td>{ditacomm:formatConditionalAttributes($keydef)}</td>
+        </tr>
+      )
       }</tbody>
     </table>
     <p>Child scopes:</p>
@@ -89,6 +108,24 @@ declare function ditacomm:reportKeyScope($keyScope as element(keyspace:keyscope)
   )
 };
 
+(:~ 
+ : Format conditional attributes 
+ :)
+declare function ditacomm:formatConditionalAttributes($elem as element()) as node()* {
+  let $atts as attribute()* := $elem/(@props | @deliveryTarget | @product | @audience | @platform | @otherprops)
+  return
+  if (exists($atts))
+  then
+    <div class="conditional-attributes">{
+      for $att in $atts
+      return
+      <div class="conditional-attribute">
+        <span class="condition-name">{name($att)}</span>
+        <span class="condition-values">{string($att)}</span>
+      </div>
+    }</div>
+  else ()
+};
 
 (:~ 
  : Report the XQuery map representation of a key space

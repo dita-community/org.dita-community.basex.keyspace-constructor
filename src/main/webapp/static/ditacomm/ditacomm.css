@@ -9,7 +9,7 @@
 table
 {
   table-layout: auto;
-  width: 400px;
+  width: 800px;
   border-collapse: collapse;
   border: 1pt solid black;
 }
@@ -24,4 +24,20 @@ td
 th, td {
   padding-top: 5px;
   padding-left: 10px;  
+}
+
+div.conditional-attributes {
+  display: block;
+}
+
+div.conditional-attribute {
+  display:block;
+}
+
+span.condition-name {
+  font-weight: normal;
+}
+
+span.condition-name:after {
+  content: ': ';
 }
