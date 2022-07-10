@@ -2,7 +2,6 @@
 <!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
 <map>
   <title>Simple scoped map</title>
-  <topicref keys="key-01" href="topic-01-1.dita"/>
   <topicgroup keyscope="scope-A scope-Aprime">
     <topicref keys="key-01" href="topic-01-A.dita"/>
     <topicref keys="key-02" href="topic-02.1-A.dita" deliveryTarget="pdf"/>
@@ -17,4 +16,5 @@
     <topicref keys="key-02" href="topic-02-B.dita"/>
     <topicref keys="key-03" href="topic-02-B.dita"/>
   </topicgroup>
+  <topicref keys="key-01" href="topic-01-1.dita"/>
 </map>

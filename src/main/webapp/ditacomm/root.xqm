@@ -63,8 +63,9 @@ declare function ditacomm:reportKeyScope($keyScope as element(keyspace:keyscope)
       </thead>    
       <tbody>{
         for $key in $keys
+        order by lower-case($key/@keyname)
         return
-        for $keyName as xs:string in ($key/@keyname ! tokenize(., '\s+'))
+        for $keyName as xs:string in ($key/@keyname ! string(.))
         let $keydefs as element()* := $key/keyspace:keydef
         return
         ( 
@@ -146,6 +147,7 @@ declare function ditacomm:reportKeyScopeMap($keyScope as map(*), $keySpace as ma
       </thead>    
       <tbody>{
         for $keyName in map:keys($keydefs)
+        order by lower-case($keyName)
         return 
         <tr>
           <td>{$keyName}</td>
