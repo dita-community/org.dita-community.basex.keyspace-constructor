@@ -39,6 +39,7 @@ To run the code perform the following steps:
    % basexhttp &
    %
    ```
+   This starts the BaseX HTTP server, which will serve the key space report page. You can test that the server is working by going to `localhost:8984/dba`. Use `admin` and `admin` as the credentials.   
 1. From the BaseX `bin` directory run the `basexgui` command as a backgroud task:
    ```
    % basexgui &
@@ -46,24 +47,26 @@ To run the code perform the following steps:
    ```
 
    This opens the BaseX GUI
-1. From the BaseX GUI select _Database_ -> _New..._ to open the Create Database dialog
+1. From the BaseX GUI main menu select _Database_ -> _New..._ to open the Create Database dialog
 1. Set the dialog fields as follows:
    * Parsing tab:
      * Parse DTDs and entities: Checked
      * Use XML Catalog file: Checked
-     * Catalog file to use: Select the `catalog-dita.xml` file from a 3.x Open Toolkit (to make sure you're using DITA 1.3 DTDs). The    * General tab:
+     * Catalog file to use: Select the `catalog-dita.xml` file from a 3.x Open Toolkit (to make sure you're using DITA 1.3 DTDs).
+
+       The Open Toolkit included with Oxygen XML will serve (`frameworks/dita/DITA-OT3.x` under the Oxygen installation directory).
+   * General tab:
      * Input file or directory: Choose the `org.dita-community.basex.keyspace-constructor/src/test/resources/dita/` directory
      * Name of database: "test-data"
      * Input format: XML
      * File patterns: `*.xml,*.dita*`
      * Skip corrupt: Checked
      * Parse files in archives: Unchecked
-Open Toolkit included with Oxygen XML will serve (`frameworks/dita/DITA-OT3.x` under the Oxygen installation directory).
      
-   Make sure the "Name of database" field is set to "test-data" and select "OK" to create the database. It should take a few seconds to load the database.
+1. Make sure the "Name of database" field is set to "test-data" and select "OK" to create the database. It should take a few seconds to load the database.
    
    You can inspect the database from the BaseX GUI Manage Databases dialog. It should show that there are about 272 nodes in the database (nodes in this context meaning XML nodes: elements, text nodes, etc.).
-1. Open a browser window to `localhost:8984/ditacomm
+1. Open a browser window to [localhost:8984/ditacomm](http://localhost:8984/ditacomm)
   
    You should see the "DITA Community Key Space Constructor Application" page with the key space report for the `simple_scoped_map.ditamap`.
 
@@ -81,7 +84,7 @@ The relevant source files are:
 
 ## How it works
 
-The XQuery module `construct-keyspace.xqm` provides the functions that take a DITA map as input and produces an XML representation of the map's key space.
+The XQuery module `construct-keyspace.xqm` provides the functions that take a DITA map as input and produce an XML representation of the map's key space.
 
 By using XML to represent the key space, rather than XQuery maps, it is easy to use normal XPath expressions to find the correct binding for a given key in a given key scope.
 
