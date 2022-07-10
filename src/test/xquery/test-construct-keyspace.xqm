@@ -33,7 +33,7 @@ declare %unit:test function test:testPass1() {
   let $keySpace as map(*) := keyspace:pass1($test:rootMap)
   let $rootScope as map(*)? := $keySpace('keyscopes')($keySpace('root-scope'))
   let $keymap as map(*) := $rootScope('keydefs')
-  let $keyName as xs:string := map:keys($keymap)[1]
+  let $keyName as xs:string := 'key-01'
   let $keydef-01 as element()? :=  $keymap($keyName)[1]
   let $scopeA as map(*)* := keyspace:getScopesByName($keySpace, 'scope-A')
   let $debug := (prof:dump('keySpace map:'), prof:dump($keySpace))
@@ -47,8 +47,63 @@ declare %unit:test function test:testPass1() {
     return
       unit:assert(map:contains($rootScope, $key), 'Expected ' || $key || ' key in keyscope map'),
     unit:assert(exists($scopeA), 'Expected to have found scope-A by name'),
+    unit:assert(exists(keyspace:getScopesByName($keySpace, 'scope-Aprime')), 'Expected to have found scope-Aprime by name'),
     unit:assert(exists($keydef-01), 'Expected a keydef element'),
     unit:assert(string($keydef-01/@href) eq 'topic-01-1.dita', 'Expected topic-01-1.dita, found "' || $keydef-01/@href || '"'),
+    ()
+  )
+};
+
+declare %unit:test function test:testPass2() {
+  let $keySpace as map(*) := keyspace:pass1($test:rootMap) ! keyspace:pass2(.)
+  let $rootScope as map(*)? := $keySpace('keyscopes')($keySpace('root-scope'))
+  let $keymap as map(*) := $rootScope('keydefs')
+  let $keyName as xs:string := 'key-01'
+  let $keydef-01 as element()? :=  $keymap($keyName)[1]
+  let $scopeA as map(*)* := keyspace:getScopesByName($keySpace, 'scope-A')
+  let $debug := (prof:dump('keySpace map:'), prof:dump($keySpace))
+  return (
+    unit:assert(exists($keySpace), 'Expected a keyspace'),
+    for $key in ('root-scope', 'keyscopes', 'source-ditamap', 'timestamp')
+    return
+      unit:assert(map:contains($keySpace, $key), 'Expected ' || $key || ' key in keySpace map'),
+    unit:assert(map:contains($keySpace, 'root-scope'), 'Expected root-scope key in key space map'),
+    for $key in ('scope-key', 'scope-def', 'keydefs', 'scope-names', 'child-scopes', 'ancestor-scopes')
+    return
+      unit:assert(map:contains($rootScope, $key), 'Expected ' || $key || ' key in keyscope map'),
+    unit:assert(exists($scopeA), 'Expected to have found scope-A by name'),
+    unit:assert(exists(keyspace:getScopesByName($keySpace, 'scope-Aprime')), 'Expected to have found scope-Aprime by name'),
+    unit:assert(exists($keydef-01), 'Expected a keydef element'),
+    unit:assert(string($keydef-01/@href) eq 'topic-01-1.dita', 'Expected topic-01-1.dita, found "' || $keydef-01/@href || '"'),
+    ()
+  )
+};
+
+declare %unit:test function test:testPass3() {
+  let $keySpace as map(*) := keyspace:pass1($test:rootMap) ! keyspace:pass2(.) ! keyspace:pass3(.)
+  let $rootScope as map(*)? := $keySpace('keyscopes')($keySpace('root-scope'))
+  let $keymap as map(*) := $rootScope('keydefs')
+  let $keyName as xs:string := 'key-01'
+  let $keydef-01 as element()? :=  $keymap($keyName)[1]
+  let $scopeA as map(*)* := keyspace:getScopesByName($keySpace, 'scope-A')
+  let $debug := (prof:dump('keySpace map:'), prof:dump($keySpace))
+  return (
+    unit:assert(exists($keySpace), 'Expected a keyspace'),
+    for $key in ('root-scope', 'keyscopes', 'source-ditamap', 'timestamp')
+    return
+      unit:assert(map:contains($keySpace, $key), 'Expected ' || $key || ' key in keySpace map'),
+    unit:assert(map:contains($keySpace, 'root-scope'), 'Expected root-scope key in key space map'),
+    for $key in ('scope-key', 'scope-def', 'keydefs', 'scope-names', 'child-scopes', 'ancestor-scopes')
+    return
+      unit:assert(map:contains($rootScope, $key), 'Expected ' || $key || ' key in keyscope map'),
+    unit:assert(exists($scopeA), 'Expected to have found scope-A by name'),
+    unit:assert(exists(keyspace:getScopesByName($keySpace, 'scope-Aprime')), 'Expected to have found scope-Aprime by name'),
+    unit:assert(exists($keydef-01), 'Expected a keydef element'),
+    unit:assert(string($keydef-01/@href) eq 'topic-01-1.dita', 'Expected topic-01-1.dita, found "' || $keydef-01/@href || '"'),
+    unit:assert(map:contains($scopeA('keydefs'),'key-01'), 'Expected unqualified "key-01" in scope A'),
+    unit:assert(string($scopeA('keydefs')('key-01')[1]/@href) eq 'topic-01-1.dita', 'Expected topic-01-1.dita, found "' || $keydef-01/@href || '"'),
+    unit:assert(map:contains($scopeA('keydefs'),'scope-A.key-01'), 'Expected qualified "scope-A.key-01" in scope A'),
+    unit:assert(string($scopeA('keydefs')('scope-A.key-01')[1]/@href) eq 'topic-01-A.dita', 'Expected topic-01-A.dita, found "' || $keydef-01/@href || '"'),
     ()
   )
 };
