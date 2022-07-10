@@ -8,6 +8,7 @@ module namespace keyspace = "http://dita-community.org/basex/keyspace/xquery/mod
 declare function keyspace:constructKeySpace($rootMap as element()) as element(keyspace:keyspace) {
   let $pass1keySpace as map(*) := keyspace:pass1($rootMap)
   let $pass2keySpace as map(*) := keyspace:pass2($pass1keySpace)
+  let $pass3keySpace as map(*) := keyspace:pass3($pass2keySpace)
   let $keySpace as map(*) := $pass1keySpace 
   let $keyspacePass1 as element(keyspace:keyspace) :=
   <keyspace:keyspace
@@ -252,6 +253,60 @@ declare function keyspace:pullDescendantScopes(
     return $newKeyscopesMap
   
 };
+
+(:~ 
+ : Perform pass 3 to push key definitions down from parent to child scopes
+ : @param keySpace Pass 2 key space map
+ : @param resultKeySpace Key space with ancestor keys pushed down
+ : @param Pass 3 key space map with ancestor keys pushed down.
+ :)
+declare function keyspace:pass3($keySpace as map(*)) as map(*) {
+  let $debug := prof:dump('keyspace:pass3: Starting...')
+  let $rootScope as map(*) := $keySpace('keyscopes')($keySpace('root-scope'))
+  let $keyScopesMap as map(*) := keyspace:pushKeysToDescendantScopes($rootScope, $keySpace('keyscopes'))
+  let $debug := prof:dump('keyspace:pass3: Done.')
+  return map:put($keySpace, 'keyscopes', $keyScopesMap)
+};
+
+(:~ 
+ : Push keys from input keyscope to its child scopes
+ : @param keyScope The key scope to push keys from
+ : @param keyScopesMap The map of scope IDs to keyscopes
+ : @return Result key scopes map with update key scopes
+ :)
+declare function keyspace:pushKeysToDescendantScopes($keyScope as map(*), $keyScopesMap as map(*))
+  as map(*) {
+  let $debug := prof:dump('keyspace:pushKeysToDescendantScopes(): Handling key scope ' || $keyScope('scope-id') || '...')
+  let $childScopes as map(*)* := ($keyScope('child-scopes') ! $keyScopesMap(.)) 
+  return
+  if (exists($childScopes))
+  then 
+    let $myKeyDefs as map(*) := $keyScope('keydefs')
+    let $newChildScopes as map(*) := 
+      map:merge(
+        for $childScope in $childScopes
+        let $newKeyDefs as map(*) :=
+          map:merge(
+            ($myKeyDefs, $childScope('keydefs')), 
+            map{'duplicates' : 'combine'}
+          )
+        return 
+          map{
+            $childScope('scope-key') :
+            map:put($childScope, 'keydefs', $newKeyDefs)
+          }
+      )
+    let $newKeyScopesMap as map(*) := map:merge(($keyScopesMap, $newChildScopes), map{'duplicates' : 'use-last'})
+    (: Now apply push to each descendant :)
+    return 
+      map:merge(
+        for $childScope in ($keyScope('child-scopes') ! $newKeyScopesMap(.)) 
+        return keyspace:pushKeysToDescendantScopes($childScope, $newKeyScopesMap)
+      )
+  else
+    $keyScopesMap
+};
+
 
 (:~ 
  : Get the key scopes with the specified name.
