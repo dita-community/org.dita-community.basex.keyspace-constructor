@@ -1,5 +1,7 @@
 module namespace keyspace = "http://dita-community.org/basex/keyspace/xquery/module/construct-keyspace";
 
+import module namespace mapproc = "http://dita-community.org/basex/keyspace/xquery/module/map-processing";
+
 (:~ 
  : Construct the XML representation of a key space  from a root map
  : @param rootMap The root map to construct the key space from
@@ -42,8 +44,8 @@ declare function keyspace:serializeKeyscopeToXml($keyScope as map(*), $keySpace 
       <keyspace:key keyname="{$key}">{
         for $keydef in $keydefs($key)
         return
-        <keyspace:keydef nodeid="{db:node-id($keydef)}">{
-          ($keydef/@*, $keydef/*[contains-token(@class, 'topic/navtitle')])
+        <keyspace:keydef nodeid="{keyspace:getNodeId($keydef)}">{
+          ($keydef/@* except($keydef/@nodeid), $keydef/*[contains-token(@class, 'topic/navtitle')])
         }</keyspace:keydef>
       }</keyspace:key>
     }</keyspace:keys>
@@ -53,7 +55,7 @@ declare function keyspace:serializeKeyscopeToXml($keyScope as map(*), $keySpace 
       let $scopeDefs as element()* := $childScopes?scope-def => util:ddo()
       return
       for $scopeDef in $scopeDefs
-      let $nodeId as xs:integer := db:node-id($scopeDef)
+      let $nodeId as xs:integer := keyspace:getNodeId($scopeDef)
       let $scope := $keySpace('keyscopes')($nodeId)
       return keyspace:serializeKeyscopeToXml($scope, $keySpace)
     }
@@ -84,24 +86,27 @@ declare function keyspace:getRootScope($keySpace as map(*)) as map(*) {
  :)
 declare function keyspace:pass1($rootMap as element()) as map(*)* {
   let $db as xs:string := db:name($rootMap)
-
-  let $keydefs as element()* := $rootMap//*[@keys]
-  let $rootScopeKey as xs:integer := db:node-id($rootMap)
+  let $resolvedMap as element() := mapproc:resolveMap($rootMap)/*
+  let $keydefs as element()* := $resolvedMap//*[@keys]
+  let $rootScopeKey as xs:integer :=  keyspace:getNodeId($resolvedMap)
   
   let $entries as map(*)* := 
     for $keydef in $keydefs
     return
     let $keyScope as element() := ($keydef/ancestor::*[@keyscope][1], root($keydef)/*)[1]
-    let $scopeKey as xs:integer := db:node-id($keyScope)
+    let $debug := (prof:dump('keyScope:'), prof:dump($keyScope))
+    let $scopeKey as xs:integer := keyspace:getNodeId($keyScope)
+    let $debug := prof:dump('$scopeKey="' || $scopeKey || '"')
     return map{ $scopeKey : $keydef}
   
-  let $scopeDefiners as element()+ := ($rootMap, $rootMap//*[@keyscope])
+  let $scopeDefiners as element()+ := ($resolvedMap, $resolvedMap//*[@keyscope])
   
   (: Map indexed by scope key of key scope maps :)
   let $scopes as map(*) :=
   map:merge(    
     for $entry as map(*) in $entries
       group by $scopeKey as xs:integer := map:keys($entry)
+      let $debug := prof:dump('$scopeKey="' || $scopeKey || '"')
       let $scopeDef as element() := db:open-id($db, $scopeKey)
       return 
       map { $scopeKey :
@@ -113,7 +118,7 @@ declare function keyspace:pass1($rootMap as element()) as map(*)* {
           if ($scopeKey eq $rootScopeKey)
           then ()
           else
-            (($scopeDef/ancestor::*[@keyscope], root($scopeDef)/*)) ! db:node-id(.),
+            (($scopeDef/ancestor::*[@keyscope], root($scopeDef)/*)) ! keyspace:getNodeId(.),
           (: Because of the grouping, $entry is actualy a sequence of maps of scope 
              key to topicref, representing all the key definitions directly defined 
              by the scope:)
@@ -322,4 +327,19 @@ declare function keyspace:getScopesByName(
   let $scopeNames as xs:string+ := $keyScope('scope-names')
   where $scopeName = $scopeNames
   return map:get($keyScopes, $key)      
+};
+
+(:~ 
+ : Get the node ID of an element, either from its @nodeid attribute or from
+ : the database.
+ : @param node The node to get the node ID for
+ : @return The node ID as an integer
+ :)
+declare function keyspace:getNodeId($node as node()) as xs:integer {
+  (: let $debug := (prof:dump('keyspace:getNodeId(): node:'), prof:dump($node)) :)
+  let $attNodeid := xs:integer($node/@nodeid)
+  let $debug := prof:dump('nodes db: ' || db:name($node))
+  let $dbNodeId := db:node-id($node)
+  (: let $debug := prof:dump('attNodeid: ' || $attNodeid || ', dbNodeId: ' || $dbNodeId) :)
+  return ($attNodeid, $dbNodeId)[1]
 };

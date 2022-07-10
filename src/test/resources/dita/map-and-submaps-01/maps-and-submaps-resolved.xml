@@ -1,0 +1,35 @@
+<map xmlns:ditaarch="http://dita.oasis-open.org/architecture/2005/" ditaarch:DITAArchVersion="1.3"
+  domains="(map mapgroup-d)                            (topic abbrev-d)                            (topic delay-d)                            a(props deliveryTarget)                            (map ditavalref-d)                            (map glossref-d)                            (topic hazard-d)                            (topic hi-d)                            (topic indexing-d)                            (topic markup-d)                            (topic pr-d)                            (topic relmgmt-d)                            (topic sw-d)                            (topic ui-d)                            (topic ut-d)                            (topic markup-d xml-d)   "
+  class="- map/map ">
+  <title class="- topic/title ">Map and Submaps 01</title>
+  <topicmeta class="- map/topicmeta ">
+    <category class="- topic/category ">map processing tests</category>
+  </topicmeta>
+  <topicref href="topics/map-and-submaps-01.dita" keys="map-and-submaps-01" class="- map/topicref ">
+    <submap orig-mapref="submap-a/submap-a.ditamap"
+      class="+ map/topicref mapgroup-d/topicgroup mapproc-d/submap "
+      xml:base="/map-and-submaps-01/map-and-submaps-01.ditamap" keyscope="scope-a">
+      <topicmeta class="- map/topicmeta ">
+        <navtitle class="- topic/navtitle ">Submap A</navtitle>
+      </topicmeta>
+      <topicref href="topics/submap-a.dita" keys="submap-a" class="- map/topicref ">
+        <submap orig-mapref="submap-c/submap-c.ditamap"
+          class="+ map/topicref mapgroup-d/topicgroup mapproc-d/submap "
+          xml:base="/map-and-submaps-01/submap-a/submap-a.ditamap" keyscope="scope-c map-c">
+          <topicmeta class="- map/topicmeta ">
+            <navtitle class="- topic/navtitle ">Submap C</navtitle>
+          </topicmeta>
+          <topicref href="topics/submap-c.dita" keys="submap-c" class="- map/topicref "/>
+        </submap>
+      </topicref>
+    </submap>
+    <submap orig-mapref="submap-b/submap-b.ditamap"
+      class="+ map/topicref mapgroup-d/topicgroup mapproc-d/submap "
+      xml:base="/map-and-submaps-01/map-and-submaps-01.ditamap" keyscope="scope-b">
+      <topicmeta class="- map/topicmeta ">
+        <navtitle class="- topic/navtitle ">Submap B</navtitle>
+      </topicmeta>
+      <topicref href="topics/submap-b.dita" keys="submap-b" class="- map/topicref "/>
+    </submap>
+  </topicref>
+</map>
