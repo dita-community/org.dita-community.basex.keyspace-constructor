@@ -15,11 +15,11 @@ as element(html) {
   return
   <html>
     <head>
-      <title>DITA Community Namespace Constructor Application</title>
+      <title>DITA Community Key Space Constructor Application</title>
       <link href="/static/ditacomm/ditacomm.css" rel="stylesheet"/>
     </head>
     <body>
-      <h1>DITA Community Namespace Constructor Application</h1>
+      <h1>DITA Community Key Space Constructor Application</h1>
       <p>Key Space for <span>simple-scoped-map/simple_scoped_map.ditamap</span>:</p>
       {
         ditacomm:reportKeySpaceForMap($rootMap)
