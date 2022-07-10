@@ -5,11 +5,11 @@ import module namespace keyspace = "http://dita-community.org/basex/keyspace/xqu
 declare
   %rest:GET
   %rest:path('/ditacomm')
+  %rest:query-param('mappath',     '{$mapPath}', 'simple-scoped-map/simple_scoped_map.ditamap')
+  %rest:query-param('db',          '{$db}',      'test-data')
   %output:method('html')
-function ditacomm:root()
+function ditacomm:root($mapPath as xs:string, $db as xs:string)
 as element(html) {
-  let $mapPath := 'simple-scoped-map/simple_scoped_map.ditamap'
-  let $db := 'test-data'
   let $rootMap as element() := db:open($db, $mapPath)/*
   
   return
