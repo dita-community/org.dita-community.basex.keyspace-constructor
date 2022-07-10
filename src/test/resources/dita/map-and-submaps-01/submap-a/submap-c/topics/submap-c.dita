@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="submap-a">
+    <title>Submap C</title>
+    <body>
+        <p>This is submap C.</p>
+    <p>Submap C is bound to the scope names "scope-c" and "map-c", where "scope-c" is defined in the
+        <xmlelement>mapref</xmlelement> to the map and "map-c" is defined on the
+        <xmlelement>map</xmlelement> element of submap <filepath>submap-c.ditamap</filepath>.</p>
+    </body>
+</topic>

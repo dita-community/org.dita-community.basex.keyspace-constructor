@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="submap-a">
+    <title>Submap B</title>
+    <body>
+        <p>This is submap B.</p>
+    <p>Submap B is bound to the scope "scope-b" defined on the <xmlelement>map</xmlelement> element
+      for <filepath>submap-b.ditamap</filepath>.</p>
+    <p>Link to submap A using scope "scope-a": <xref keyref="scope-a.submap-a"/></p>
+    <p>Link to submap C using scope "scope-c": <xref keyref="scope-a.scope-c.submap-c"/>.</p>
+    <p>Link to submap C using scope "map-c": <xref keyref="scope-a.map-c.submap-c"/>.</p>
+    </body>
+</topic>

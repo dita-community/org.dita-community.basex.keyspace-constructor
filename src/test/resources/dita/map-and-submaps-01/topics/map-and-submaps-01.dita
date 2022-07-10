@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="map-and-submaps-01">
+    <title>Map and Submaps 01</title>
+    <body>
+        <p>This map represents a typical system of maps and submaps in order to test map resolution
+      and key space construction with submaps.</p>
+    </body>
+</topic>
