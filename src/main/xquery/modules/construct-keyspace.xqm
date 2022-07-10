@@ -7,6 +7,7 @@ module namespace keyspace = "http://dita-community.org/basex/keyspace/xquery/mod
  :)
 declare function keyspace:constructKeySpace($rootMap as element()) as element(keyspace:keyspace) {
   let $pass1keySpace as map(*) := keyspace:pass1($rootMap)
+  let $pass2keySpace as map(*) := keyspace:pass2($pass1keySpace)
   let $keySpace as map(*) := $pass1keySpace 
   let $keyspacePass1 as element(keyspace:keyspace) :=
   <keyspace:keyspace
@@ -189,9 +190,11 @@ declare function keyspace:addChildScopes($keySpace as map(*)) as map(*) {
  : @param Pass 2 key space map with descendant key definitions pulled up.
  :)
 declare function keyspace:pass2($keySpace as map(*)) as map(*) {
+  let $debug := prof:dump('keyspace:pass2: Starting...')
   let $rootScope as map(*) := $keySpace('keyscopes')($keySpace('root-scope'))
-  let $resultKeySpace := keyspace:pullDescendantScopes($rootScope, $keySpace)
-  return $resultKeySpace
+  let $keyScopesMap as map(*) := keyspace:pullDescendantScopes($rootScope, $keySpace, map{})
+  let $debug := prof:dump('keyspace:pass2: Done.')
+  return map:put($keySpace, 'keyscopes', $keyScopesMap)
 };
 
 (:~ 
@@ -199,67 +202,55 @@ declare function keyspace:pass2($keySpace as map(*)) as map(*) {
  : @param keyScope The key scope to process
  : @param keySpace Pass 1 key space map
  : @param keyDefs Sequence of key-to-keydef maps pulled from descendants.
- : @return The key scope with pulled-up keydefs added to it.
+ : @return Map of key scope IDs to key scopes
  :)
 declare function keyspace:pullDescendantScopes(
   $keyScope as map(*), 
-  $keySpace as map(*)) 
-  as map(*) 
-{
-  let $childScopes as map(*)* := ($keyScope('child-scopes') ! $keySpace(.))
-  (: let $debug := (prof:dump('keySpace'), prof:dump($keySpace)) :)
-  let $pulledKeydefs as map(*)* := () (: keyspace:pullKeydefsFromScopes($childScopes, $keySpace, map{}) :)
-  let $newKeydefs as map(*) := 
-     map:merge(
-       ($keyScope('keydefs'),
-        $pulledKeydefs), 
-       map{'duplicates' : 'combine'})
-  return map:put($keyScope, 'keydefs', $newKeydefs)
-  
-};
-
-(:~ 
- : Collect scope-qualified key names from a sequence of key scopes
- : @param childScopes Zero or more key scopes to get the keys from.
- : @param keySpace The key space that contains the scopes
- : @param keyDefs The accumulated key definitions from any ancestor scopes.
- : @return Sequence of key definition maps, one for each key-defining topicref
- :)
-declare function keyspace:pullKeydefsFromScopes(
-  $childScopes as map(*)*,
   $keySpace as map(*),
-  $keyDefs as map(*)*) 
-    as map(*)* {
-  let $newKeydefs as map(*)* := 
-  for $scope in $childScopes
-  return keyspace:getScopeQualifiedKeydefsForScope($scope, $keySpace)
-  let $resultKeydefs as map(*) := (
-    $keyDefs,
-    $newKeydefs
-  )  
-  return $resultKeydefs
-};
-
-(:~ 
- : Gets the scope-qualified key definitions from a key scope
- : @param keyScope The key scope to get the key definitions for
- : @param keySpace The key space that contains the scope
- : @return Sequence of key definition maps(*)
- :)
-declare function keyspace:getScopeQualifiedKeydefsForScope(
-  $keyScope as map(*), 
-  $keySpace as map(*)) 
-    as map(*)* {
-  let $scopeNames as xs:string+ := $keyScope('scope-names')
-  let $descendantKeys as map(*)* :=
-    for $childScope in ($keyScope('child-scopes') ! $keySpace(.))
-    return keyspace:getScopeQualifiedKeydefsForScope($childScope, $keySpace)
-  let $resultKeydefs as map(*)* :=
-    for $scopeName in $scopeNames
+  $resultKeyScopes as map(*)
+)
+  as map(*)
+{
+  let $childScopes as map(*)* := ($keyScope('child-scopes') ! $keySpace('keyscopes')(.))
+  return
+  if (exists($childScopes))
+  then (: Process the children then add their key defs to this scope :)
+    let $myKeydefs as map(*) := $keyScope('keydefs')
+    (: Result is a new keyspaces map :)
+    let $newChildScopes as map(*) :=
+      map:merge(
+        for $childScope in $childScopes 
+        return keyspace:pullDescendantScopes($childScope, $keySpace, $resultKeyScopes)
+      )
+    let $pulledKeys as map(*)* :=
+        for $childScope in ($keyScope('child-scopes') ! $newChildScopes(.))
+        let $keydefsMap as map(*) := $childScope('keydefs')
+        return
+        for $key in map:keys($keydefsMap)
+        return
+        for $scopeName in ($childScope?scope-names)
+        return
+        map { 
+           string-join(($scopeName, $key), '.') : $keydefsMap($key)
+        }
+    let $newKeydefs as map(*) := 
+      map:merge(
+        ($keyScope?keydefs,
+         $pulledKeys
+        ),
+        map{ 'duplicates' : 'combine'}
+      )
+    let $newKeyscope as map(*) :=
+       map{
+         $keyScope('scope-key') :
+         map:put($keyScope, 'keydefs', $newKeydefs)
+       }
     return
-    for $key in map:keys($keyScope('keydefs'))
-    return map{ string-join(($scopeName, $key) , '.') : $keyScope('keydefs')($key)}
-  return $resultKeydefs
+    map:merge(($newChildScopes, $newKeyscope))
+  else 
+    let $newKeyscopesMap as map(*) := map:merge(($resultKeyScopes, map{$keyScope('scope-key') : $keyScope}))
+    return $newKeyscopesMap
+  
 };
 
 (:~ 
