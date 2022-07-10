@@ -9,19 +9,15 @@ declare function keyspace:constructKeySpace($rootMap as element()) as element(ke
   let $pass1keySpace as map(*) := keyspace:pass1($rootMap)
   let $pass2keySpace as map(*) := keyspace:pass2($pass1keySpace)
   let $pass3keySpace as map(*) := keyspace:pass3($pass2keySpace)
-  let $keySpace as map(*) := $pass1keySpace 
-  let $keyspacePass1 as element(keyspace:keyspace) :=
+  let $keySpaceMap as map(*) := $pass3keySpace 
+  let $keySpace as element(keyspace:keyspace) :=
   <keyspace:keyspace
-    timestamp="{$keySpace('timestamp')}"
-    source-ditamap="{$keySpace('source-ditamap')}"
+    timestamp="{$keySpaceMap('timestamp')}"
+    source-ditamap="{$keySpaceMap('source-ditamap')}"
   >{
-    keyspace:serializeKeyscopeToXml(keyspace:getRootScope($keySpace), $keySpace)
+    keyspace:serializeKeyscopeToXml(keyspace:getRootScope($keySpaceMap), $keySpaceMap)
   }</keyspace:keyspace>
-  let $keyspacePass2 as element(keyspace:keyspace) :=
-      keyspace:pullUpKeydefs($keyspacePass1)
-  let $keyspacePass3 as element(keyspace:keyspace) :=
-      keyspace:pushDownKeydefs($keyspacePass2)
-  return $keyspacePass3
+  return $keySpace
 };
 
 (:~ 
