@@ -107,7 +107,7 @@ declare function keyspace:pass1($rootMap as element()) as map(*)* {
     for $entry as map(*) in $entries
       group by $scopeKey as xs:integer := map:keys($entry)
       let $debug := prof:dump('$scopeKey="' || $scopeKey || '"')
-      let $scopeDef as element() := db:open-id($db, $scopeKey)
+      let $scopeDef as element() := db:get-id($db, $scopeKey)
       return 
       map { $scopeKey :
         map { 
